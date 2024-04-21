@@ -6,3 +6,9 @@
 //
 
 import Foundation
+
+struct WeatherLocaion{
+    var name: String
+    var lalitude: Double
+    var longitude: Double
+}
