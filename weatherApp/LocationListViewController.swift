@@ -7,29 +7,44 @@
 
 import UIKit
 
+// import gooogle places in app delegate - with did finish launching options because we used coco pods for google locations
+import GooglePlaces
+
 class LocationListViewController: UIViewController {
 
    
     @IBOutlet weak var tableView: UITableView!
-    
-    var weatherLocations: [WeatherLocaion] = []
-    
     @IBOutlet weak var editButton: UIBarButtonItem!
     
     @IBOutlet weak var addLocation: UIBarButtonItem!
     
+    // an array of weather locations
+    var weatherLocations: [WeatherLocation] = []
+    
+    //creating a variable that keep track of location the user clicked on - selectedlocationindex
+    var selectedLocationIndex = 0
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
-        
-        var Location1 = WeatherLocaion(name: "India", lalitude: 0, longitude: 0)
-        var Location2 = WeatherLocaion(name: "USA", lalitude: 0, longitude: 0)
-        var Location3 = WeatherLocaion(name: "Illinois", lalitude: 0, longitude: 0)
-        weatherLocations.append(Location1)
-        weatherLocations.append(Location2)
-        weatherLocations.append(Location3)
+
         tableView.dataSource = self
         tableView.delegate = self
+    }
+    func saveLocations(){
+        let encoder = JSONEncoder()
+        if let encoded = try? encoder.encode(weatherLocations){
+            UserDefaults.standard.setValue(encoded, forKey: "weatherLocations")
+        } else {
+            print("Error:saving encoded didnt work")
+        }
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        
+        selectedLocationIndex = tableView.indexPathForSelectedRow!.row
+        
+        print("Selected Index : \(selectedLocationIndex)")
+        saveLocations()
     }
     
     @IBAction func editButtonTapped(_ sender: UIBarButtonItem) {
@@ -41,12 +56,13 @@ class LocationListViewController: UIViewController {
             tableView.setEditing(true, animated: true)
             sender.title = "Done"
         }
-        
     }
-    
 
     @IBAction func addLocationTapped(_ sender: UIBarButtonItem) {
-        
+        // we got this using the import google - when the button taps it should redirect to the google search location
+        let autocompleteController = GMSAutocompleteViewController()
+           autocompleteController.delegate = self
+           present(autocompleteController, animated: true, completion: nil)
        
     }
     
@@ -59,6 +75,7 @@ extension LocationListViewController: UITableViewDelegate, UITableViewDataSource
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
         cell.textLabel?.text = weatherLocations[indexPath.row].name
+        cell.detailTextLabel?.text = "Lat: \(weatherLocations[indexPath.row].lalitude) Long: \(weatherLocations[indexPath.row].longitude)"
         return cell
     }
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
@@ -74,7 +91,27 @@ extension LocationListViewController: UITableViewDelegate, UITableViewDataSource
         weatherLocations.insert(itemToMove, at: destinationIndexPath.row)
     }
     
-    
-    
 }
 
+extension LocationListViewController: GMSAutocompleteViewControllerDelegate {
+
+  // Handle the user's selection.
+  func viewController(_ viewController: GMSAutocompleteViewController, didAutocompleteWith place: GMSPlace) {
+      let newLocation = WeatherLocation(name: place.name ?? "UnKnown Place", lalitude: place.coordinate.latitude, longitude: place.coordinate.longitude)
+      weatherLocations.append(newLocation)
+      tableView.reloadData()
+    dismiss(animated: true, completion: nil)
+  }
+
+  func viewController(_ viewController: GMSAutocompleteViewController, didFailAutocompleteWithError error: Error) {
+    // TODO: handle the error.
+    print("Error: ", error.localizedDescription)
+  }
+
+  // User canceled the operation.
+  func wasCancelled(_ viewController: GMSAutocompleteViewController) {
+    dismiss(animated: true, completion: nil)
+  }
+
+
+}
