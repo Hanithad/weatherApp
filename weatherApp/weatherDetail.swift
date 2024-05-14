@@ -6,35 +6,94 @@
 //
 
 import Foundation
+//created a date format and updating in the UI -
+private let dateFormatter: DateFormatter = {
+    print("created a date formatter in weather detail.swift ")
+    let dateFormatter = DateFormatter()
+    //EEEE - that just gives the weekday - 
+    dateFormatter.dateFormat = "EEEE"
+    return dateFormatter
+}() //this closure acts as a function for date formatter
+
+//created a date format and updating in the UI -
+private let hourFormatter: DateFormatter = {
+    print("created a date formatter in weather detail.swift ")
+    let hourlyFormatter = DateFormatter()
+    //EEEE - that just gives the weekday -
+    hourlyFormatter.dateFormat = "ha "
+    return hourlyFormatter
+}() //this closure acts as a function for date formatter
+
+//created this strcut - hold elemnts of this parsed and converted array we got from json below
+struct DailyWeather{
+    var dailyIcon: String
+    var dailyWeekday: String
+    var dailySummary: String
+    var dailyhigh: Int
+    var dailyLow: Int
+}
+
+
+struct HourlyWeather{
+    var hour: String
+    var horlyTemp: Int
+    var hourlyIcon: String
+}
 
 class WeatherDetail: WeatherLocation{
-    
-    struct Result: Codable{
+    //private - only visible inside the class - wont be visible outside of class
+    private struct Result: Codable{
         var timezone: String
         var current: Current
+        //daily is an array
+        var daily: [Daily]
+        //hourly
+        var hourly:[Hourly]
     }
-    struct Current: Codable{
+    private struct Current: Codable{
         var dt: TimeInterval
         var temp: Double
         var weather: [Weather]
         
     }
-    struct Weather: Codable{
+    private struct Weather: Codable{
         var description: String
         var icon: String
+    }
+    
+    //created for accessing the json file fromapi - daily is array
+    private struct Daily: Codable{
+        var dt: TimeInterval
+        //in an array of daily - temp is an element which we need min and max values - so nested it
+        var temp : Temp
+        //weather  is an array
+        var weather: [Weather]
+    }
+    //temp is nested from - neede min and max values - created a seperate struct
+    private struct Temp: Codable{
+        var max: Double
+        var min: Double
+    }
+    
+    private struct Hourly: Codable{
+        var dt: TimeInterval
+        var temp: Double
+        var weather: [Weather]
+        
     }
     
     var timezone = ""
     var currentTime  = 0.0
     var temperature = 0
     var summary = ""
-    var dailyIcon = ""
+    var dayIcon = ""
+    //created a class wide property - going to array to hold daily weather
+    var dailyWeatherData: [DailyWeather] = []
     
-    
+    var horlyweatherData: [HourlyWeather] = []
     func getData(completed: @escaping ()->()){
         
         // in api - we need to look the documentation - of what exactly we need the parameters for the project - so exclude - minutely we need hourly and daily , and the temp should be in - units metrics - check with the api - documentation 
-        
         //https://api.openweathermap.org/data/3.0/onecall?lat=42.254311&lon=-87.950654&appid=9509df3a0484eb83d646c954d480b8b2
         let urlString = "https://api.openweathermap.org/data/3.0/onecall?lat=\(lalitude)&lon=\(longitude)&units=metric&exclude=minutely&appid=\(APIkeys.openWeatherKey)"
         
@@ -51,7 +110,6 @@ class WeatherDetail: WeatherLocation{
         let session = URLSession.shared
         
         //get data with .dataTask method
-        
         let task = session.dataTask(with: url) { (data, response, error) in
             if let error = error{
                 print("Error: \(error.localizedDescription)")
@@ -67,10 +125,51 @@ class WeatherDetail: WeatherLocation{
                 self.currentTime = result.current.dt
                 self.temperature = Int(result.current.temp.rounded())
                 self.summary = result.current.weather[0].description
-                self.dailyIcon = self.fileNameForIcon(icon: result.current.weather[0].icon)
+                self.dayIcon = self.fileNameForIcon(icon: result.current.weather[0].icon)
                 
-                print("\(result)")
-                print("TimeZone for \(self.name)is \(result.timezone)")
+                //created a loop - that goesthrough and transforms the data in daily array - in
+                for index in 0..<result.daily.count{
+                   
+                    let weekdayDate = Date(timeIntervalSince1970: result.daily[index].dt)
+                    dateFormatter.timeZone = TimeZone(identifier: result.timezone)
+                    let dailyWeekday = dateFormatter.string(from: weekdayDate)
+                    
+                    //daily[index] - that gets us into the elemnet of the daily array - get the value for icon which is inside of weather array -
+                    
+                    //self.filenameForIcon - converts the darksky code in icon name for the image we have corresponding name in the asset catalog
+                    let dailyIcon = self.fileNameForIcon(icon: result.daily[index].weather[0].icon)
+                    let dailySummary = result.daily[index].weather[0].description
+                    let dailyHigh = Int(result.daily[index].temp.max.rounded())
+                    let dailyLow = Int(result.daily[index].temp.min.rounded())
+                    
+                    let dailyWeather = DailyWeather(dailyIcon: dailyIcon, dailyWeekday: "", dailySummary: dailySummary, dailyhigh: dailyHigh, dailyLow: dailyLow)
+                    self.dailyWeatherData.append(dailyWeather)
+                    
+                    print("Day: \(dailyWeekday), High: \(dailyHigh), Low:\(dailyLow)")
+                }
+                //get no more than 24 hrs of data
+                let lastHour = min(24, result.hourly.count)
+                if lastHour > 0 {
+                    for index in 1...lastHour{
+                       
+                        let hourlyDate = Date(timeIntervalSince1970: result.hourly[index].dt)
+                        hourFormatter.timeZone = TimeZone(identifier: result.timezone)
+                        let hour = hourFormatter.string(from: hourlyDate)
+                        
+                        //daily[index] - that gets us into the elemnet of the daily array - get the value for icon which is inside of weather array -
+                        
+                        //self.filenameForIcon - converts the darksky code in icon name for the image we have corresponding name in the asset catalog
+                        let hourlyIcon = self.fileNameForIcon(icon: result.hourly[index].weather[0].icon)
+                        
+                        let hourlyTemperature = Int(result.hourly[index].temp.rounded())
+                       
+                        
+                        let hourlyWeather = HourlyWeather(hour: hour, horlyTemp: hourlyTemperature, hourlyIcon: hourlyIcon)
+                        self.horlyweatherData.append(hourlyWeather)
+                        print("Hour: \(hour), Temperature: \(hourlyTemperature), Icon: \(hourlyIcon)")
+                    }
+                }
+                
             }catch{
                 print("Error: \(error.localizedDescription)")
             }

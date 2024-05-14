@@ -11,7 +11,7 @@ import UIKit
 private let dateFormatter: DateFormatter = {
     print("created a date formatter ")
     let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "EEEE, MMM d, h:mm aaa"
+    dateFormatter.dateFormat = "EEEE, MMM d"
     return dateFormatter
 }() //this closure acts as a function for date formatter
 
@@ -31,6 +31,11 @@ class LocationDetailViewController: UIViewController {
 
     @IBOutlet weak var pageControl: UIPageControl!
     
+    //created a tableview in detail tableview and adding outlets
+    
+    @IBOutlet weak var tableView: UITableView!
+    
+    
     //holds weather location data
     var weatherDetail : WeatherDetail!
    
@@ -40,9 +45,23 @@ class LocationDetailViewController: UIViewController {
    
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        tableView.delegate = self
+        tableView.dataSource = self
+        clearUserInterface()
         updateUserInterface()
        
     }
+    //creating a func to clear user interface
+    
+    func clearUserInterface(){
+        dateLabel.text = ""
+        placeLabel.text = ""
+        temperatureLabel.text = ""
+        summaryLabel.text = ""
+        imageView.image = UIImage()
+    }
+    
     func updateUserInterface(){
        
         let pageViewController = windowScene?.windows.first!.rootViewController as! PageViewController
@@ -65,7 +84,8 @@ class LocationDetailViewController: UIViewController {
                 self.placeLabel.text = self.weatherDetail.name
                 self.temperatureLabel.text = "\(self.weatherDetail.temperature)°"
                 self.summaryLabel.text = self.weatherDetail.summary
-                self.imageView.image = UIImage(named: self.weatherDetail.dailyIcon)
+                self.imageView.image = UIImage(named: self.weatherDetail.dayIcon)
+                self.tableView.reloadData()
             }
             
         }
@@ -104,5 +124,23 @@ class LocationDetailViewController: UIViewController {
         pageViewController.setViewControllers([pageViewController.createLocationDetailViewController(forPage: (sender as AnyObject).currentPage)], direction: direction, animated: true)
     
     }
+    
+}
+
+extension LocationDetailViewController: UITableViewDelegate, UITableViewDataSource{
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return weatherDetail.dailyWeatherData.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! DailyTableViewCell
+        //daily weather data at particular array - 
+        cell.dailyWeather = weatherDetail.dailyWeatherData[indexPath.row]
+        return cell
+    }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 80
+    }
+    
     
 }
