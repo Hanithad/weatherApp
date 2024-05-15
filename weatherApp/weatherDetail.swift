@@ -36,7 +36,7 @@ struct DailyWeather{
 
 struct HourlyWeather{
     var hour: String
-    var horlyTemp: Int
+    var hourlyTemp: Int
     var hourlyIcon: String
 }
 
@@ -59,6 +59,7 @@ class WeatherDetail: WeatherLocation{
     private struct Weather: Codable{
         var description: String
         var icon: String
+        var id: Int
     }
     
     //created for accessing the json file fromapi - daily is array
@@ -90,7 +91,7 @@ class WeatherDetail: WeatherLocation{
     //created a class wide property - going to array to hold daily weather
     var dailyWeatherData: [DailyWeather] = []
     
-    var horlyweatherData: [HourlyWeather] = []
+    var hourlyweatherData: [HourlyWeather] = []
     func getData(completed: @escaping ()->()){
         
         // in api - we need to look the documentation - of what exactly we need the parameters for the project - so exclude - minutely we need hourly and daily , and the temp should be in - units metrics - check with the api - documentation 
@@ -159,13 +160,15 @@ class WeatherDetail: WeatherLocation{
                         //daily[index] - that gets us into the elemnet of the daily array - get the value for icon which is inside of weather array -
                         
                         //self.filenameForIcon - converts the darksky code in icon name for the image we have corresponding name in the asset catalog
-                        let hourlyIcon = self.fileNameForIcon(icon: result.hourly[index].weather[0].icon)
+//                        let hourlyIcon = self.fileNameForIcon(icon: result.hourly[index].weather[0].icon)
+                        
+                        let hourlyIcon = self.systemNameFromID(id: result.hourly[index].weather[0].id, icon: result.hourly[index].weather[0].icon)
                         
                         let hourlyTemperature = Int(result.hourly[index].temp.rounded())
                        
                         
-                        let hourlyWeather = HourlyWeather(hour: hour, horlyTemp: hourlyTemperature, hourlyIcon: hourlyIcon)
-                        self.horlyweatherData.append(hourlyWeather)
+                        let hourlyWeather = HourlyWeather(hour: hour, hourlyTemp: hourlyTemperature, hourlyIcon: hourlyIcon)
+                        self.hourlyweatherData.append(hourlyWeather)
                         print("Hour: \(hour), Temperature: \(hourlyTemperature), Icon: \(hourlyIcon)")
                     }
                 }
@@ -212,5 +215,39 @@ class WeatherDetail: WeatherLocation{
             newFileName = ""
         }
         return newFileName
+    }
+    private func systemNameFromID(id: Int, icon: String)-> String{
+        switch id{
+        case 200...299:
+            return "cloud.bolt.rain"
+        case 300...399:
+            return "cloud.drizzle"
+        case 500,501,520,521,531:
+            return "cloud.rain"
+        case 502,503,504,522:
+            return "cloud.heavyrain"
+        case 511,611...616:
+            return "sleet"
+        case 600...602,620...622:
+            return "snow"
+        case 701,711,741:
+            return "cloud.fog"
+        case 721:
+            return (icon.hasSuffix("d") ? "sun.haze" : "cloud.fog")
+        case 731,751,761,762:
+            return (icon.hasSuffix("d") ? "sun.dust" : "cloud.fog")
+        case 771:
+            return "wind"
+        case 781:
+            return "tornado"
+        case 800:
+            return (icon.hasSuffix("d") ? "sun.max" : "moon")
+        case 801,802:
+            return (icon.hasSuffix("d") ? "cloud.sun" : "cloud.moon")
+        case 803,804:
+            return "cloud"
+        default:
+            return "questionmark.diamond"
+        }
     }
 }
