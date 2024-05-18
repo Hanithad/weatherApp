@@ -8,7 +8,6 @@
 import Foundation
 //created a date format and updating in the UI -
 private let dateFormatter: DateFormatter = {
-    print("created a date formatter in weather detail.swift ")
     let dateFormatter = DateFormatter()
     //EEEE - that just gives the weekday - 
     dateFormatter.dateFormat = "EEEE"
@@ -17,7 +16,6 @@ private let dateFormatter: DateFormatter = {
 
 //created a date format and updating in the UI -
 private let hourFormatter: DateFormatter = {
-    print("created a date formatter in weather detail.swift ")
     let hourlyFormatter = DateFormatter()
     //EEEE - that just gives the weekday -
     hourlyFormatter.dateFormat = "ha "
@@ -146,7 +144,6 @@ class WeatherDetail: WeatherLocation{
                     let dailyWeather = DailyWeather(dailyIcon: dailyIcon, dailyWeekday: "", dailySummary: dailySummary, dailyhigh: dailyHigh, dailyLow: dailyLow)
                     self.dailyWeatherData.append(dailyWeather)
                     
-                    print("Day: \(dailyWeekday), High: \(dailyHigh), Low:\(dailyLow)")
                 }
                 //get no more than 24 hrs of data
                 let lastHour = min(24, result.hourly.count)
@@ -169,7 +166,7 @@ class WeatherDetail: WeatherLocation{
                         
                         let hourlyWeather = HourlyWeather(hour: hour, hourlyTemp: hourlyTemperature, hourlyIcon: hourlyIcon)
                         self.hourlyweatherData.append(hourlyWeather)
-                        print("Hour: \(hour), Temperature: \(hourlyTemperature), Icon: \(hourlyIcon)")
+                        
                     }
                 }
                 

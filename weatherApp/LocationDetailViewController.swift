@@ -6,10 +6,11 @@
 //
 
 import UIKit
+import CoreLocation
+
 
 //created a date format and updating in the UI - 
 private let dateFormatter: DateFormatter = {
-    print("created a date formatter ")
     let dateFormatter = DateFormatter()
     dateFormatter.dateFormat = "EEEE, MMM d"
     return dateFormatter
@@ -46,9 +47,19 @@ class LocationDetailViewController: UIViewController {
     // for page view controller we created this - to keep traack of the index
     var locationIndex = 0
     
-   
+   //location Manger
+    var locationManager: CLLocationManager!
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+    
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        clearUserInterface()
         
         tableView.delegate = self
         tableView.dataSource = self
@@ -57,11 +68,16 @@ class LocationDetailViewController: UIViewController {
         
         collectionView.delegate = self
         collectionView.dataSource = self
-        
-        clearUserInterface()
-        updateUserInterface()
+    
+        if locationIndex == 0 {
+            getLocation()
+        }
        
+        updateUserInterface()
+
     }
+    
+ 
     //creating a func to clear user interface
     
     func clearUserInterface(){
@@ -111,6 +127,7 @@ class LocationDetailViewController: UIViewController {
     
     
     //to show individual weather locations weather location that user clicked on locationListViewcontroller at selected index path 
+    //no need to call super in this method segue. because default implementation oof this method does nothing
     @IBAction func unwindFromLocationListViewController(segue: UIStoryboardSegue) {
         let source = segue.source as! LocationListViewController
         //this grabs the index in the listviewcontroller whatever the user clicks on tableviewcontroller
@@ -168,4 +185,77 @@ extension LocationDetailViewController: UICollectionViewDelegate, UICollectionVi
     }
     
     
+}
+
+extension LocationDetailViewController: CLLocationManagerDelegate{
+    
+    func getLocation(){
+        //creating a CLLocationManager automatically check authorizzation ststus - did user give permission
+        locationManager = CLLocationManager()
+        locationManager.delegate = self
+    }
+    
+    //check the status  - did change authorization
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        print("👮🏼 Checking authentication status")
+        handleAuthentictionStatus(status: status)
+    }
+    
+    //creating a helper function - to handle things - for aauthentication
+    
+    func handleAuthentictionStatus(status: CLAuthorizationStatus){
+        
+        //switch status - xcode automatically ad the default statements --
+        switch status{
+            
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .restricted:
+            self.oneButtonAlert(title: "Location Services denied", message: "It may be that parental controls are restricting location use in this app.")
+        case .denied:
+            //TODO: Handle Alert ability to change
+            break
+        case .authorizedAlways:
+            locationManager.requestLocation()
+        case .authorizedWhenInUse:
+            locationManager.requestLocation()
+        @unknown default:
+            print(" 😡 Developer Alert : unknown case of stsus in \(status)")
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        //TODO: Deal with change in location
+        print("🗺️ Updating location")
+        let currentLocation = locations.last ?? CLLocation()
+        print(" 🗺️ current location is \(currentLocation.coordinate.latitude), \(currentLocation.coordinate.longitude)")
+        
+        //from coordinates to lalitude and longitude - to a user friendly placeNames
+        let geocoder = CLGeocoder()
+        geocoder.reverseGeocodeLocation(currentLocation) { (placemarks,error) in
+            var locationName = ""
+            if placemarks != nil{
+                //get the first placemark
+                let placemark = placemarks?.last
+                //assign placemark to locationName
+                locationName = placemark?.name ?? "Parts Unknown"
+            } else{
+                print("😡 Error: Retriving place")
+                locationName = "couldnt  find location"
+            }
+            print(" 🗺️🗺️  locationName = \(locationName)")
+            //update weatherLocaion[0] with current location so it can  be used in update user interface. get location only called when locationIndex  == 0
+            let pageViewController = windowScene?.windows.first!.rootViewController as! PageViewController
+            //location index -- current index of current position of current page
+            pageViewController.individualWeatherParameters[self.locationIndex].lalitude = currentLocation.coordinate.latitude
+            pageViewController.individualWeatherParameters[self.locationIndex].longitude = currentLocation.coordinate.longitude
+            pageViewController.individualWeatherParameters[self.locationIndex].name = locationName
+            self.updateUserInterface()
+        }
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
+        print("ERROR: \(error.localizedDescription). Failed to get device location.")
+        
+    }
 }
